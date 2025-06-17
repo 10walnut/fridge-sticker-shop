@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # 后端 Django 服务
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: fridge-sticker-backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+      - ./backend/certs:/app/certs # 挂载证书目录
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SECRET_KEY=your-insecure-secret-key-for-development
+      - DJANGO_DEBUG=True
+      - DATABASE_URL=postgres://postgres:password@db:5432/fridge_sticker_db
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  # 前端 Nginx 服务
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: fridge-sticker-frontend
+    ports:
+      - "8080:80" # 将容器的80端口映射到主机的8080端口
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # PostgreSQL 数据库服务
+  db:
+    image: postgres:13-alpine
+    container_name: fridge-sticker-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=fridge_sticker_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
